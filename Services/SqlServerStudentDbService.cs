@@ -2,6 +2,7 @@ using Cw5.DTOs.Requests;
 using Cw5.Models;
 using System.Data.SqlClient;
 using System;
+using System.Data;
 
 namespace Cw5.Services {
     public class SqlServerStudentDbService : IStudentDbService
@@ -80,6 +81,49 @@ namespace Cw5.Services {
                 command.ExecuteNonQuery();
 
                 transaction.Commit();
+
+                return enrollment;
+            }
+        }
+
+        public Enrollment PromoteStudents(PromoteStudentRequest request) {
+            using(var connection = new SqlConnection(CONNECTION_STRING))
+            using(var command = new SqlCommand()) {
+                command.Connection = connection;
+                connection.Open();
+
+                command.CommandText = "SELECT IdStudy FROM Studies WHERE Name = @studies";
+                command.Parameters.AddWithValue("studies", request.Studies);
+
+                var reader = command.ExecuteReader();
+                if (!reader.Read()) {
+                    return null;
+                }
+                var idStudy = Int32.Parse(reader["IdStudy"].ToString());
+                reader.Close();
+
+                int enrollmentId = 0;
+
+                command.CommandType = CommandType.StoredProcedure;
+                command.Parameters.Add(new SqlParameter("@Studies", request.Studies));
+                command.Parameters.Add(new SqlParameter("@Semester", request.Semester));
+
+                var returnParameter = command.Parameters.Add("@ReturnVal", SqlDbType.Int);
+                returnParameter.Direction = ParameterDirection.ReturnValue;
+
+                command.ExecuteNonQuery();
+                enrollmentId = Int32.Parse(returnParameter.Value.ToString());
+
+                var enrollment = new Enrollment();
+                command.CommandText = "SELECT e.IdEnrollment, e.Semester, e.IdStudy, e.StartDate FROM Enrollment e WHERE e.IdEnrollment = @idenrollment";
+                command.Parameters.AddWithValue("idenrollment", enrollmentId);
+                reader = command.ExecuteReader();
+                if (reader.Read()) {
+                    enrollment.IdEnrollment = Int32.Parse(reader["IdEnrollment"].ToString());
+                    enrollment.Semester = Int32.Parse(reader["Semester"].ToString());
+                    enrollment.IdStudy = Int32.Parse(reader["IdStudy"].ToString());
+                    enrollment.StartDate = DateTime.Parse(reader["StartDate"].ToString());
+                }
 
                 return enrollment;
             }

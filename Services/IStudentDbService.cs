@@ -6,6 +6,6 @@ namespace Cw5.Services
     public interface IStudentDbService
     {
         Enrollment EnrollStudent(EnrollStudentRequest request);
-        //PromoteStudentRequest PromoteStudents(PromoteStudentRequest request);
+        Enrollment PromoteStudents(PromoteStudentRequest request);
     }
 }
